@@ -1,0 +1,57 @@
+name: Build PDK Release
+# Package the ready-to-use PDK views into a versioned tarball and publish a
+# GitHub Release. Runs free on public-repo GitHub Actions. Triggered when a
+# version tag (v*) is pushed by the upstream-sync job, or manually for a tag
+# that already exists (e.g. the initial v0.2.0 mirrored before this workflow).
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing version tag to package (e.g. v0.2.0)'
+        required: true
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve tag
+        id: v
+        run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.v.outputs.tag }}
+          fetch-depth: 1
+      - name: Package the PDK
+        id: pkg
+        run: |
+          set -euo pipefail
+          VER="${{ steps.v.outputs.tag }}"
+          NAME="ihp-sg13cmos5l-${VER}"
+          # Ship the usable PDK: reference views, tech decks/models, docs, the
+          # Vyges descriptor, README, LICENSE. Drop VCS/CI and the QA/testcase
+          # trees (regression fixtures, not needed to use the PDK).
+          tar --exclude='./.git' --exclude='./.github' --exclude='./libs.qa' \
+              --exclude='*/testing/testcases' \
+              -czf "/tmp/${NAME}.tar.gz" \
+              -C "$GITHUB_WORKSPACE" \
+              libs.ref libs.tech libs.doc ihp_sg13cmos5l.vyges-pdk.json README.md LICENSE
+          ( cd /tmp && sha256sum "${NAME}.tar.gz" > "${NAME}.tar.gz.sha256" )
+          echo "name=${NAME}" >> "$GITHUB_OUTPUT"
+          ls -lh "/tmp/${NAME}.tar.gz"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VER="${{ steps.v.outputs.tag }}"
+          NAME="${{ steps.pkg.outputs.name }}"
+          NOTES="Vyges packaged release of the IHP SG13CMOS-5L open PDK — a mirror of IHP-GmbH/ihp-sg13cmos5l @ ${VER}. 130nm CMOS-only (no SiGe HBT), 4 thin + 1 thick metal, no MiM caps / deep-N-well / Schottky. Bundle: libs.ref, libs.tech, libs.doc + the Vyges descriptor. Verify with the .sha256."
+          if gh release view "$VER" >/dev/null 2>&1; then
+            gh release upload "$VER" "/tmp/${NAME}.tar.gz" "/tmp/${NAME}.tar.gz.sha256" --clobber
+          else
+            gh release create "$VER" "/tmp/${NAME}.tar.gz" "/tmp/${NAME}.tar.gz.sha256" \
+              --title "IHP SG13CMOS-5L ${VER}" --notes "$NOTES"
+          fi

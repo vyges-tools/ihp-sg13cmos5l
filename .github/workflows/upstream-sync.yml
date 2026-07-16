@@ -1,0 +1,42 @@
+name: Upstream Sync
+# Auto-mirror IHP-GmbH/ihp-sg13cmos5l into this Vyges mirror, preserving the
+# Vyges additions (the ihp_sg13cmos5l.vyges-pdk.json descriptor + the vyges
+# workflows). No git-lfs: the largest file (sg13cmos5l_io.gds ~64 MB) is under
+# GitHub's 100 MB hard limit and upstream ships it as a plain blob, so a plain
+# merge keeps the mirror a faithful, low-friction copy.
+on:
+  schedule:
+    - cron: '23 6 * * *'   # daily 06:23 UTC
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: upstream-sync
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge upstream (keep Vyges additions)
+        run: |
+          set -euo pipefail
+          git config user.name  "vyges-bot"
+          git config user.email "bot@vyges.com"
+          git remote add upstream https://github.com/IHP-GmbH/ihp-sg13cmos5l.git
+          git fetch --no-tags upstream main
+          # Mirror upstream release tags too (drives the pdk-catalog version list).
+          git fetch upstream 'refs/tags/v*:refs/tags/v*' || true
+          before=$(git rev-parse HEAD)
+          # -X ours: on any conflict keep the Vyges side. The descriptor + vyges
+          # workflows are mirror-only (absent upstream), so the merge never touches
+          # them; -X ours only matters if upstream ever adds a colliding path.
+          git merge --no-edit -X ours upstream/main || { git merge --abort || true; echo "conflict; kept ours"; exit 0; }
+          if [ "$(git rev-parse HEAD)" != "$before" ]; then
+            git push origin HEAD:main && echo "synced upstream changes"
+          else
+            echo "already up to date"
+          fi
+          git push origin --tags || true
