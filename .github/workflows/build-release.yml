@@ -23,7 +23,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ steps.v.outputs.tag }}
-          fetch-depth: 1
+          fetch-depth: 0
+      - name: Overlay Vyges descriptor from main
+        # The v* tags point at upstream commits (no Vyges additions). The
+        # descriptor is a mirror-only file on main and is version-independent,
+        # so graft the current one onto the tagged tree for packaging.
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          git checkout origin/main -- ihp_sg13cmos5l.vyges-pdk.json
       - name: Package the PDK
         id: pkg
         run: |
