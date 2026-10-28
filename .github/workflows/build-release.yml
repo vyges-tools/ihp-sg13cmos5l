@@ -20,7 +20,7 @@ jobs:
       - name: Resolve tag
         id: v
         run: echo "tag=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ steps.v.outputs.tag }}
           fetch-depth: 0

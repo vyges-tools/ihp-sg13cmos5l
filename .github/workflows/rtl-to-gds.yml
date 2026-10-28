@@ -17,7 +17,7 @@ jobs:
     steps:
       # 1. Checkout CMOS5L PDK (este repo)
       - name: Checkout CMOS5L PDK
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: cmos5l
 
@@ -48,7 +48,7 @@ jobs:
 
       # 6. Setup Cachix (pre-built binaries)
       - name: Setup Cachix OpenLane
-        uses: cachix/cachix-action@v15
+        uses: cachix/cachix-action@v17
         with:
           name: openlane
 
@@ -59,7 +59,7 @@ jobs:
 
       # 7. Cache PDK (large ~1GB)
       - name: Cache PDK
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: pdk
           key: ihp-pdk-${{ hashFiles('pdk/.git/HEAD') }}
@@ -119,7 +119,7 @@ jobs:
 
       # 12. Upload artifacts
       - name: Upload LibreLane results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ${{ matrix.testcase }}-librelane-results
@@ -127,7 +127,7 @@ jobs:
           retention-days: 14
 
       - name: Upload DRC results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: ${{ matrix.testcase }}-drc-results
