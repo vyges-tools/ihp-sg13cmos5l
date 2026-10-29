@@ -26,7 +26,7 @@ on:
 
 jobs:
   lint_python:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-${{ vars.VYGES_UBUNTU_VERSION || '24.04' }}
     steps:
       - uses: actions/checkout@v7
         with:

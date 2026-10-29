@@ -29,7 +29,7 @@ on:
 
 jobs:
   drc_regression:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-${{ vars.VYGES_UBUNTU_VERSION || '24.04' }}
 
     steps:
       - name: Checkout repo
